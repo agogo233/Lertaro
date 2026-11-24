@@ -1,0 +1,66 @@
+# Win x64 portable build for CI: builds the same layout as the x64 pass of make.bat
+# (app + plugins + portable helper scripts, PDBs stripped) and uploads it as a flat
+# artifact. The artifact zip IS the portable package: download it and unzip once.
+# Intentionally no installer, no arm64 and no signing -- that remains release.yml's job.
+name: Build Portable x64
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Compute short SHA
+        shell: bash
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Publish app (x64, framework-dependent)
+        run: dotnet publish Lertaro.slnx -c Release -o publish/x64/Lertaro -v quiet
+        shell: pwsh
+
+      - name: Publish plugins
+        run: dotnet publish Lertaro.Plugins.slnx -c Release -o publish/x64/Lertaro/Plugins -v quiet
+        shell: pwsh
+
+      - name: Copy portable helper scripts and strip PDBs
+        run: |
+          Copy-Item portable-updater.bat, portable-updater.ps1, install-dotnet-runtime.bat, portable-cleanup.bat -Destination publish/x64/Lertaro/
+          Get-ChildItem publish/x64/Lertaro -Filter *.pdb -Recurse | Remove-Item -Force
+        shell: pwsh
+
+      - name: Verify package completeness
+        shell: pwsh
+        run: |
+          $out = 'publish/x64/Lertaro'
+          $required = @('Lertaro.App.exe','Lertaro.App.dll','Lertaro.App.runtimeconfig.json','portable-updater.bat','portable-updater.ps1','install-dotnet-runtime.bat','portable-cleanup.bat')
+          foreach ($f in $required) {
+            if (-not (Test-Path (Join-Path $out $f))) { throw "Missing required file: $f" }
+          }
+          $plugins = (Get-ChildItem "$out/Plugins" -Filter *.dll).Count
+          if ($plugins -lt 33) { throw "Expected at least 33 plugin DLLs, found $plugins" }
+          $count = (Get-ChildItem $out -Recurse -File).Count
+          Write-Host "Package OK: $count files total, $plugins plugin DLLs."
+
+      # path/* keeps the artifact flat (app files at the zip root, Plugins/ preserved);
+      # uploading the built zip itself would wrap it in a second archive layer.
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lertaro-Portable-x64-${{ env.SHORT_SHA }}
+          path: publish/x64/Lertaro/*
+          retention-days: 7
+          if-no-files-found: error

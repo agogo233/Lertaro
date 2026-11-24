@@ -1,6 +1,6 @@
 # Windows runner 与发布链路
 
-实现入口：[.gitlab-ci.yml](../.gitlab-ci.yml)、[make.bat](../make.bat)、[GitHub release workflow](../.github/workflows/release.yml)、[签名验证](../verify-release.ps1)、[release notes 生成](../generate-release-notes.ps1)。本文签名与发布链路于 2026-11-19 核对；首次成功发布的验证来自 2026-11-04，不代表当前 runner 在线状态。
+实现入口：[.gitlab-ci.yml](../.gitlab-ci.yml)、[make.bat](../make.bat)、[GitHub release workflow](../.github/workflows/release.yml.bak)、[签名验证](../verify-release.ps1)、[release notes 生成](../generate-release-notes.ps1)。本文签名与发布链路于 2026-11-19 核对；首次成功发布的验证来自 2026-11-04，不代表当前 runner 在线状态。
 
 ## runner 的运行环境
 
