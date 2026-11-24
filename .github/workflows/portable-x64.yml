@@ -50,10 +50,24 @@ jobs:
           foreach ($f in $required) {
             if (-not (Test-Path (Join-Path $out $f))) { throw "Missing required file: $f" }
           }
-          $plugins = (Get-ChildItem "$out/Plugins" -Filter *.dll).Count
-          if ($plugins -lt 33) { throw "Expected at least 33 plugin DLLs, found $plugins" }
+          # BrowserData/Calendar/ContentSearch/FlowLauncherBridge (and Flow.Launcher.Plugin)
+          # publish into Plugins\<name>\ subfolders on purpose (flat, deps.json-less load
+          # dirs for their native/SQLite deps), so the check must look recursively.
+          $names = @(
+            'CoreExtensions','AutoCAD','PinyinAlias','DirectoryOpus','TotalCommander','Xyplorer','Xplorer2',
+            'OneCommander','Tessoa','Files','WebSearch','Translator','AnimeThemes','CuratedThemes','FolderCascader',
+            'SystemSettings','ProcessManager','WindowSwitcher','CustomCommands','FileFilters','CustomActions',
+            'BrowserData','QuickLookBridge','WinRAR','Bandizip','WPS','SpanishAlias','FlowLauncherBridge',
+            'ContentSearch','FileUnlocker','AudioDeviceSelector','Calendar'
+          ) + @('Flow.Launcher.Plugin')
+          $expected = ($names | ForEach-Object { if ($_ -like '*.*') { "$_.dll" } else { "Lertaro.Plugins.$_.dll" } })
+          $missing = foreach ($p in $expected) {
+            if (-not (Get-ChildItem "$out/Plugins" -Recurse -Filter $p -ErrorAction SilentlyContinue)) { $p }
+          }
+          if ($missing) { throw "Missing plugin DLLs: $($missing -join ', ')" }
+          $plugins = (Get-ChildItem "$out/Plugins" -Recurse -Filter *.dll).Count
           $count = (Get-ChildItem $out -Recurse -File).Count
-          Write-Host "Package OK: $count files total, $plugins plugin DLLs."
+          Write-Host "Package OK: $count files total, $plugins plugin DLLs (recursive), all $($expected.Count) plugin assemblies present."
 
       # path/* keeps the artifact flat (app files at the zip root, Plugins/ preserved);
       # uploading the built zip itself would wrap it in a second archive layer.
