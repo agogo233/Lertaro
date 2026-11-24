@@ -54,7 +54,7 @@ public class UserSettings
     /// Read once per hook launch, so changing it takes effect when the hook is relaunched, not on restart.
     /// </summary>
     public bool RequestElevatedHook { get; set; } = false;
-    public bool AutoCheckUpdates { get; set; } = true;
+    public bool AutoCheckUpdates { get; set; } = false;
     public bool AutoSilentUpdate { get; set; } = false;
     /// <summary>
     /// Prefixes a GitHub release download is tried through, in order, before its own address. Empty means
